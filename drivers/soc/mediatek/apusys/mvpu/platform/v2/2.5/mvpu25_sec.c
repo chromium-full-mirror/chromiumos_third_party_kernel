@@ -1174,6 +1174,7 @@ int mvpu25_replace_mem(uint32_t session_id,
 	void *buf_ptr_base;
 	void *buf_ptr;
 	uint32_t target_pool_ofst = 0;
+	uint32_t pool_size = 0;
 
 	uint32_t *rp_buf_old_map;
 	uint32_t *rp_buf_old_base;
@@ -1186,6 +1187,16 @@ int mvpu25_replace_mem(uint32_t session_id,
 
 	if (mvpu_loglvl_sec >= APUSYS_MVPU_LOG_DBG)
 		pr_info("[MVPU][Sec] %s\n", __func__);
+
+	if (session_id >= MAX_SAVE_SESSION || hash_id >= MAX_SAVE_HASH ||
+	    !hash_pool[session_id])
+		return -EINVAL;
+
+	if (!hash_pool[session_id]->hash_dma_buf[hash_id] ||
+	    !hash_pool[session_id]->hash_offset[hash_id])
+		return -EINVAL;
+
+	pool_size = hash_pool[session_id]->hash_pool_size[hash_id];
 
 	ret_dma_buf_vmap = dma_buf_vmap(hash_pool[session_id]->hash_dma_buf[hash_id], &sys_map);
 	buf_ptr_base = sys_map.vaddr;
@@ -1237,6 +1248,14 @@ int mvpu25_replace_mem(uint32_t session_id,
 			target_pool_ofst =
 				hash_pool[session_id]
 					->hash_offset[hash_id][rp_buf_old_map[cnt]];
+
+			if ((u64)target_pool_ofst + rp_buf_old_offset[cnt] + sizeof(uint32_t) > pool_size) {
+				pr_err("[MVPU][Sec] rp[%d] out of pool bounds: pool_ofst 0x%x, old_ofst 0x%x, pool_size 0x%x\n",
+				       cnt, target_pool_ofst, rp_buf_old_offset[cnt], pool_size);
+				ret = -EINVAL;
+				goto out_unmap;
+			}
+
 			buf_ptr = (void *)((uintptr_t)buf_ptr_base
 								+ target_pool_ofst
 								+ rp_buf_old_offset[cnt]);
@@ -1245,6 +1264,14 @@ int mvpu25_replace_mem(uint32_t session_id,
 		target_pool_ofst =
 				hash_pool[session_id]
 					->hash_offset[hash_id][rp_buf_old_map[cnt]];
+
+		if ((u64)target_pool_ofst + rp_buf_old_offset[cnt] + sizeof(uint32_t) > pool_size) {
+			pr_err("[MVPU][Sec] rp[%d] out of pool bounds: pool_ofst 0x%x, old_ofst 0x%x, pool_size 0x%x\n",
+			       cnt, target_pool_ofst, rp_buf_old_offset[cnt], pool_size);
+			ret = -EINVAL;
+			goto out_unmap;
+		}
+
 		buf_ptr = (void *)((uintptr_t)buf_ptr_base
 							+ target_pool_ofst
 							+ rp_buf_old_offset[cnt]);
@@ -1275,6 +1302,7 @@ int mvpu25_replace_mem(uint32_t session_id,
 					*((uint32_t *)buf_ptr));
 	}
 
+out_unmap:
 	//cache sync
 	dma_buf_end_cpu_access(hash_pool[session_id]->hash_dma_buf[hash_id], DMA_TO_DEVICE);
 
