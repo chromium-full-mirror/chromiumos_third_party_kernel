@@ -50,7 +50,7 @@ config IWL7000_TESTMODE
 config IWL7000_XVT
 	tristate "Enable IWL7000 XVT (production test) code"
 	depends on 64BIT
-	default m
+	default n
 	depends on IWL7000
 	depends on IWL7000_TESTMODE
 
