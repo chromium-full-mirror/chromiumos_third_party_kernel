@@ -937,6 +937,19 @@ int ipu_psys_fh_deinit(struct ipu_psys_fh *fh)
 					pm_runtime_put(dev);
 			}
 			list_del(&kppg->list);
+			/*
+			 * ipu_psys_ppg_stop() only unlinks kppg from the
+			 * stop list, and only on its "exceptional stop" arm.
+			 * A kppg can still be linked on the scheduler's
+			 * module-global start list (e.g. after an -ENOSPC
+			 * resource-contention retry in
+			 * ipu_psys_scheduler_ppg_start()) with no other path
+			 * that unlinks it. Make sure kppg is off both
+			 * scheduler lists before it is freed below, so the
+			 * scheduler can never walk into freed memory.
+			 */
+			ipu_psys_scheduler_remove_kppg(kppg, SCHED_START_LIST);
+			ipu_psys_scheduler_remove_kppg(kppg, SCHED_STOP_LIST);
 			mutex_unlock(&kppg->mutex);
 
 			list_for_each_entry_safe(kcmd, kcmd0,
