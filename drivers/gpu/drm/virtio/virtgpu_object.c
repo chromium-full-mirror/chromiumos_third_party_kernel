@@ -250,11 +250,9 @@ int virtio_gpu_object_create(struct virtio_gpu_device *vgdev,
 
 	ret = virtio_gpu_object_shmem_init(vgdev, bo, &ents, &nents);
 	if (ret != 0) {
-		if (fence)
-			virtio_gpu_array_unlock_resv(objs);
 		virtio_gpu_array_put_free(objs);
 		virtio_gpu_free_object(&shmem_obj->base);
-		return ret;
+		goto err_unlock_resv;
 	}
 
 	if (params->blob) {
@@ -273,6 +271,9 @@ int virtio_gpu_object_create(struct virtio_gpu_device *vgdev,
 	*bo_ptr = bo;
 	return 0;
 
+err_unlock_resv:
+	if (fence)
+		virtio_gpu_array_unlock_resv(objs);
 err_put_objs:
 	virtio_gpu_array_put_free(objs);
 err_put_id:
