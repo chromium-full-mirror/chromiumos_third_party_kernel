@@ -124,7 +124,7 @@ void mtk_imgsys_pipe_remove_job(struct mtk_imgsys_request *req)
 	unsigned long flag;
 
 	spin_lock_irqsave(&req->imgsys_pipe->running_job_lock, flag);
-	list_del(&req->list);
+	list_del_init(&req->list);
 	req->imgsys_pipe->num_jobs--;
 	spin_unlock_irqrestore(&req->imgsys_pipe->running_job_lock, flag);
 
@@ -298,7 +298,7 @@ void mtk_imgsys_pipe_try_enqueue(struct mtk_imgsys_pipe *pipe)
 	}
 
 	req = list_first_entry(&pipe->pipe_job_pending_list, struct mtk_imgsys_request, list);
-	list_del(&req->list);
+	list_del_init(&req->list);
 	pipe->num_pending_jobs--;
 	spin_unlock_irqrestore(&pipe->pending_job_lock, flag);
 

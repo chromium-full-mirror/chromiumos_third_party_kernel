@@ -911,6 +911,8 @@ static struct media_request *mtk_imgsys_request_alloc(struct media_device *mdev)
 	if (!req->buf_map)
 		goto error;
 
+	INIT_LIST_HEAD(&req->list);
+
 	return &req->req;
 
 error:
@@ -922,6 +924,17 @@ static void mtk_imgsys_request_free(struct media_request *req)
 {
 	struct mtk_imgsys_request *imgsys_req =
 					mtk_imgsys_media_req_to_imgsys_req(req);
+	struct mtk_imgsys_pipe *pipe = imgsys_req->imgsys_pipe;
+	unsigned long flag;
+
+	if (pipe) {
+		spin_lock_irqsave(&pipe->pending_job_lock, flag);
+		if (!list_empty(&imgsys_req->list)) {
+			list_del(&imgsys_req->list);
+			pipe->num_pending_jobs--;
+		}
+		spin_unlock_irqrestore(&pipe->pending_job_lock, flag);
+	}
 
 	vfree(imgsys_req->buf_map);
 	vfree(imgsys_req);
