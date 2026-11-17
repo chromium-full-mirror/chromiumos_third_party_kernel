@@ -153,10 +153,15 @@ enum print_line_t {
 
 enum print_line_t trace_handle_return(struct trace_seq *s);
 
-void tracing_generic_entry_update(struct trace_entry *entry,
-				  unsigned short type,
-				  unsigned long trace_flags,
-				  unsigned int trace_ctx);
+static inline void tracing_generic_entry_update(struct trace_entry *entry,
+						unsigned short type,
+						unsigned int trace_ctx)
+{
+	entry->preempt_count		= trace_ctx & 0xff;
+	entry->pid			= current->pid;
+	entry->type			= type;
+	entry->flags =			trace_ctx >> 16;
+}
 
 unsigned int tracing_gen_ctx_irq_test(unsigned int irqs_status);
 
